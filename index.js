@@ -38,8 +38,6 @@ bot.on('message', async (msg) => {
             for (const game of data.data) {
                 msg.guild.channels.create(`${game.awayTeam}-${game.homeTeam}` , { type: 'text', parent: cat }).then((channel) => {
                     console.log(channel)
-                }.catch(err) => {
-                    msg.reply(`There was a error: ${err}`);
                 });
                 // msg.guild.createChannel(`${game.awayTeam}-${game.homeTeam}` , { type: 'text' }).then((channel) => {
                 //     channel.setParent(cat);
