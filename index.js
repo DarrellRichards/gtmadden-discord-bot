@@ -2,10 +2,10 @@ require('dotenv').config();
 const Discord = require('discord.js');
 const { Pool } = require('pg')
 const client = new Pool({
-    user: 'maskuukd',
-    host: 'lallah.db.elephantsql.com',
-    database: 'maskuukd',
-    password: 'kUxfIkwaGNz7eVL6Z9yOeUygY13Jg87x',
+    user: 'lfvsvvlfoftuht',
+    host: 'ec2-34-200-139-9.compute-1.amazonaws.com',
+    database: 'dddmngje1ulg1m',
+    password: 'b7a447890bf1ff72c44edbd0daf7fbba7442c139341feebedac2cae117168f71',
 });
 const axios = require('axios');
 const TOKEN = process.env.TOKEN;
