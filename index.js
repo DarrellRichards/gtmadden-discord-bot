@@ -2,10 +2,10 @@ require('dotenv').config();
 const Discord = require('discord.js');
 const { Pool } = require('pg')
 const client = new Pool({
-    user: 'lfvsvvlfoftuht',
-    host: 'ec2-34-200-139-9.compute-1.amazonaws.com',
-    database: 'dddmngje1ulg1m',
-    password: 'b7a447890bf1ff72c44edbd0daf7fbba7442c139341feebedac2cae117168f71',
+    connectionString: process.env.DATABASE_URL,
+    ssl: {
+        rejectUnauthorized: false
+    }
 });
 const axios = require('axios');
 const TOKEN = process.env.TOKEN;
@@ -13,13 +13,13 @@ const TOKEN = process.env.TOKEN;
 const bot = new Discord.Client({ intents: ["GUILDS", "GUILD_MESSAGES"] })
 bot.login(TOKEN);
 
-bot.on('ready', () => {
+bot.on('ready', async () => {
   console.info(`Logged in as ${bot.user.tag}!`);
+  await client.connect()
 });
 
 bot.on('message', async (msg) => {
     try {
-        await client.connect()
         let cat = 0;
         let league = '6214563'
         const server = msg.guild.id;
@@ -33,8 +33,10 @@ bot.on('message', async (msg) => {
                 } 
                 await client.query(`INSERT INTO gtmadden(league, server)VALUES(${leagueElement}, ${server})`)
                 msg.reply('We have setup the support for youre league :partying_face:')
+                return 
             } else {
-                msg.reply('You do not have the role to create channels... :disappointed_relieved:')
+                msg.reply('You do not have the role to create channels... :disappointed_relieved:')      
+                return        
             }
         }
         if (msg.content.startsWith('!advanced')) {
@@ -76,9 +78,9 @@ bot.on('message', async (msg) => {
                 }
             } else {
                 msg.reply('You do not have the role to create channels... :disappointed_relieved:')
+                return 
             }
         }
-
     } catch (error) {
         console.error(error)
     }
