@@ -31,12 +31,12 @@ const grabRookies = async (msg, league, server) => {
             // msg.reply(embed)
             break;
         case 'rushing':
-            let embed = new Discord.MessageEmbed()
+            let embed2 = new Discord.MessageEmbed()
             .setTitle('Rooking Rushing Leaders')
             for (const player of data.data.rushingLeaders) {
-                embed.addField(`${player.firstName} ${player.lastName}, ${player.position}, ${player.teamName}`, `${player.stats.rushAtt} Att  , ${player.stats.rushFum} Fum, ${player.stats.rushYds} Yards, ${player.stats.rushTDs} TDs`)
+                embed2.addField(`${player.firstName} ${player.lastName}, ${player.position}, ${player.teamName}`, `${player.stats.rushAtt} Att  , ${player.stats.rushFum} Fum, ${player.stats.rushYds} Yards, ${player.stats.rushTDs} TDs`)
             }
-            if (embed) msg.reply({embeds: [embed]})
+            if (embed2) msg.reply({embeds: [embed2]})
             break;
     
         default:
