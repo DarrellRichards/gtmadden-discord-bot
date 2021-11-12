@@ -84,14 +84,14 @@ bot.on('message', async (msg) => {
                 if (week > 0) {
                     msg.guild.channels.cache.forEach((channel)=>{
                         console.log(channel.name)
-                        if (channel.name === 'Weekly' || channel.name === 'games' || channel.name === 'GAMES'|| channel.name === '--GAME DAY--') {
+                        if (channel.name === 'Weekly' || channel.name === 'games' || channel.name === 'GAMES'|| channel.name === '▬▬ GAME DAY ▬▬') {
                             cat = channel.id
                             msg.reply(`Currently setting up game channels for week ${week}`);
                         }
                     })
 
                     if (cat === 0 || cat === undefined) {
-                        msg.reply('Currently there is no Category for games setup, please use one of the following: Weekly, GAMES, --GAME DAY--');
+                        msg.reply('Currently there is no Category for games setup, please use one of the following: Weekly, GAMES, ▬▬ GAME DAY ▬▬');
                         return
                     }
                     const data = await axios.get(`https://gametime-21.herokuapp.com/${league}/schedules?week=${week}`)
