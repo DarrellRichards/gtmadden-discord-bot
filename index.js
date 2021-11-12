@@ -30,16 +30,18 @@ const grabRookies = async (msg, league, server) => {
             if (embed) msg.reply({embeds: [embed]})
             // msg.reply(embed)
             break;
+        case 'rushing':
+            let embed = new Discord.MessageEmbed()
+            .setTitle('Rooking Rushing Leaders')
+            for (const player of data.data.rushingLeaders) {
+                embed.addField(`${player.firstName} ${player.lastName}, ${player.position}, ${player.teamName}`, `${player.stats.rushAtt} Att  , ${player.stats.rushFum} Fum, ${player.stats.rushYds} Yards, ${player.stats.rushTDs} TDs`)
+            }
+            if (embed) msg.reply({embeds: [embed]})
+            break;
     
         default:
             break;
     }
-    // const list = data.data.map((item, i) => {
-    //     console.log(item)
-    //     return
-    // })
-    // console.log(data.data.passingLeaders)
-
 }
 
 bot.on('ready', async () => {
@@ -95,7 +97,6 @@ bot.on('message', async (msg) => {
                         return
                     }
                     const data = await axios.get(`https://gametime-21.herokuapp.com/${league}/schedules?week=${week}`)
-                    console.log(data.data)
                     msg.guild.channels.create(`week-${week}` , { type: 'text', parent: cat }).then((_) => {
                         // console.log(channel)
                     });
