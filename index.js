@@ -10,8 +10,121 @@ const client = new Pool({
 const axios = require('axios');
 const TOKEN = process.env.TOKEN;
 
-const bot = new Discord.Client({ intents: ["GUILDS", "GUILD_MESSAGES"] })
+const bot = new Discord.Client({ intents: ["GUILDS", "GUILD_MESSAGES", "GUILD_MESSAGE_REACTIONS"], partials: ['MESSAGE', 'CHANNEL', 'REACTION'] })
 bot.login(TOKEN);
+
+const checkIfUserVoted = async (reaction, user) => {
+    return new Promise(async (resolve, reject) => {
+        try {
+            const query = `SELECT * FROM gameofweekvotes WHERE messageid='${reaction.message.id}'`
+            const found = await client.query(query)
+            if (found.rowCount > 0) return resolve(true)
+            resolve(false)
+        } catch (error) {
+            reject(error)
+        }
+        
+    })
+}
+
+
+const checkIfLocked = async (reaction, user) => {
+    return new Promise(async (resolve, reject) => {
+        try {
+            const query = `SELECT * FROM gameofweek WHERE messageid='${reaction.message.id}' AND locked = true`
+            const found = await client.query(query)
+            if (found.rowCount > 0) return resolve(true)
+            resolve(false)
+        } catch (error) {
+            reject(error)
+        }
+        
+    })
+}
+
+bot.on('messageReactionAdd', async (reaction, user) => {
+    const hasUserVoted = await checkIfUserVoted(reaction, user)
+    const isGameLocked = await checkIfLocked(reaction, user)
+    console.log(isGameLocked)
+    console.log(reaction.message.id)
+    console.log(reaction._emoji.name)
+    console.log(user.id)
+    console.log(user.username)
+    console.log(user.discriminator)
+    if (reaction.partial) {
+        // If the message this reaction belongs to was removed the fetching might result in an API error, which we need to handle
+        try {
+            await reaction.fetch();
+        } catch (error) {
+            console.log('Something went wrong when fetching the message: ', error);
+            // Return as `reaction.message.author` may be undefined/null
+            return;
+        }
+    }
+
+    try {
+        if (user.username !== 'GTMadden') {
+            // Save Reaction to DB
+            // Check if a user has already voted...
+            if (!hasUserVoted && !isGameLocked) {
+                if (reaction._emoji.name === '🟢') {
+                    const query = `INSERT INTO gameofweekvotes(messageid, userid, votecolor, username, discorduser)VALUES(${reaction.message.id}, ${user.id}, 'Green', '${user.username}', '${user.username}#${user.discriminator}')`
+                    await client.query(query)
+                    const query2 = `UPDATE gameofweek SET teamVote = teamVote + 1 WHERE messageid = '${reaction.message.id}'`
+                    await client.query(query2)
+                }
+    
+                if (reaction._emoji.name === '🔵') {
+                    const query = `INSERT INTO gameofweekvotes(messageid, userid, votecolor, username, discorduser)VALUES(${reaction.message.id}, ${user.id}, 'Blue', '${user.username}', '${user.username}#${user.discriminator}')`
+                    await client.query(query)
+                    const query2 = `UPDATE gameofweek SET team2vote = team2vote + 1 WHERE messageid = '${reaction.message.id}'`
+                    await client.query(query2)
+                }
+            } else {
+                console.error('User has already voted')
+            }
+            
+        } else {
+            console.log('GTMadden Setup Reactions')
+        }
+    } catch (error) {
+        console.error(error)   
+    }
+});
+
+bot.on('messageReactionRemove', async (reaction, user) => {
+    const hasUserVoted = await checkIfUserVoted(reaction, user)
+    const isGameLocked = await checkIfLocked(reaction, user)
+    if (reaction.partial) {
+        // If the message this reaction belongs to was removed the fetching might result in an API error, which we need to handle
+        try {
+            await reaction.fetch();
+        } catch (error) {
+            console.log('Something went wrong when fetching the message: ', error);
+            // Return as `reaction.message.author` may be undefined/null
+            return;
+       
+        }
+    }
+
+    if (hasUserVoted && !isGameLocked) {
+        if (reaction._emoji.name === '🟢') {
+            const query = `DELETE FROM gameofweekvotes WHERE messageid = '${reaction.message.id}' AND userid = '${user.id}'`
+            await client.query(query)
+            const query2 = `UPDATE gameofweek SET teamVote = teamVote - 1 WHERE messageid = '${reaction.message.id}'`
+            await client.query(query2)
+        }
+    
+        if (reaction._emoji.name === '🔵') {
+            const query = `DELETE FROM gameofweekvotes WHERE messageid = '${reaction.message.id}' AND userid = '${user.id}'`
+            await client.query(query)
+            const query2 = `UPDATE gameofweek SET team2Vote = team2Vote - 1 WHERE messageid = '${reaction.message.id}'`
+            await client.query(query2)
+        }
+    }
+
+    
+});
 
 
 const grabRookies = async (msg, league, server) => {
@@ -28,7 +141,6 @@ const grabRookies = async (msg, league, server) => {
                 
             }
             if (embed) msg.reply({embeds: [embed]})
-            // msg.reply(embed)
             break;
         case 'rushing':
             let embed2 = new Discord.MessageEmbed()
@@ -42,6 +154,117 @@ const grabRookies = async (msg, league, server) => {
         default:
             break;
     }
+}
+
+const creatingTheGOTW = async (msg, league) => {
+    try {
+    const found = await client.query(`SELECT * FROM gtmadden WHERE league=${league}`)
+    if (found.rowCount <= 0) return msg.reply('League is not configged yet, run !config with league id')
+    const stuff = msg.content.substr("!gotw ".length);
+    if (!stuff) return msg.reply('Must pass back the teams you wish to create GOTW with')
+    // Send Message Save Message ID in DB and update reactions
+    // Check which teams are being selected to the GOTW
+    const teams = stuff.split(/[ ,]+/);
+    if (teams[0] === 'lock') {
+        const query2 = `UPDATE gameofweek SET locked = true WHERE messageid = '${teams[1]}'`
+        await client.query(query2)
+        msg.reply(`${teams[1]} has been locked, all voting from here will be rejected in the database`)
+        return
+    }
+    const data = await axios.get(`http://localhost:8080/6214563/stats/?team=${teams[0]}&team2=${teams[1]}`) 
+    const fetchedTeams = []
+
+    for(const team of data.data.matchedTeams) {
+        fetchedTeams.push(team)
+    }
+
+    const message = `
+        @everyone GAME OF THE WEEK
+
+${fetchedTeams[0].teamName.toUpperCase()} (${fetchedTeams[0].record}) 🟢 vs ${fetchedTeams[1].teamName.toUpperCase()} (${fetchedTeams[1].record}) 🔵
+
+Team Stats:
+
+${fetchedTeams[0].teamName.toUpperCase()}
+Points Per Game Ranking: ${fetchedTeams[0].ppgRank}
+Points Per Game: ${fetchedTeams[0].ppg}
+Power Ranking: ${fetchedTeams[0].powerRank}
+
+------------------------------------------------------
+
+${fetchedTeams[1].teamName.toUpperCase()}
+Points Per Game Ranking: ${fetchedTeams[1].ppgRank}
+Points Per Game: ${fetchedTeams[1].ppg}
+Power Ranking: ${fetchedTeams[1].powerRank}
+
+GAME OF THE WEEK WINNER RECEIVES: 100K 
+
+CORRECTLY GUESSING GOTW: 100K 
+
+TO VOTE SIMPLY REACT WITH THE CORRESPONDING TEAM COLOR 
+
+THERE WILL BE END OF THE SEASON INCENTIVES FOR PARTICIPATION: 
+
+13+ CORRECT GUESSES = TBD 8-12 CORRECT GUESSES = TBD 0-7 CORRECT GUESSES = TBD
+
+STILL WORKING ON THE FINAL DETAILS. MORE INFORMATION WILL BE PROVIDED WHEN AVAILABLE`;
+    msg.channel.send(message).then(async (message) => {
+        // message.id = the message id of the sent message
+        msg.channel.send(`The above GOTW ID is ${message.id}`)
+        const query = `INSERT INTO gameofweek(messageid, team, team2)VALUES(${message.id}, '${fetchedTeams[0].teamName}', '${fetchedTeams[1].teamName}')`
+        console.log(query)
+        await client.query(query)
+        // await client.query(`INSERT INTO gameoftheweek(messageID, team, team2, )VALUES(${message.id}, ${fetchedTeams[0]}, ${fetchedTeams[1]})`)
+        message.react("🟢")
+        message.react("🔵")
+      }).catch((err) => {
+        console.error(err)
+        return msg.reply('GOTW was unable to created...')
+       });
+    } catch (error) {
+        console.error(error)
+        return msg.reply('There was a error')
+    }
+}
+
+
+const findGOTW = async (msg, league) => {
+    // Find a Single GOTW
+    // Find all GOTW's
+    const games = []
+    try {
+        const found = await client.query(`SELECT * FROM gtmadden WHERE league=${league}`)
+        if (found.rowCount <= 0) return msg.reply('League is not configged yet, run !config with league id')
+    
+        const query = `SELECT * FROM gameofweek`
+    
+        const data = await client.query(query)
+        for (const game of data.rows) {
+            const ff = new Discord.MessageEmbed()
+                .setTitle(`${game.team} vs ${game.team2}`)
+            // if (embed) msg.reply({embeds: [embed]})
+            const queryVotes = `SELECT * FROM gameofweekvotes WHERE messageid = '${game.messageid}'`
+            const voteData = await client.query(queryVotes)
+            for (const vote of voteData.rows) {
+                if (vote.votecolor === 'Green') {
+                    ff.addField('Voted:', game.team, true)
+                }
+
+                if (vote.votecolor === 'Blue') {
+                    ff.addField('Voted:', game.team2, true)
+                }
+                ff.addField('User:', `<@!${vote.userid}>`, true)
+            }
+
+            games.push(ff)
+
+        }
+        
+        msg.reply({embeds: games})
+    } catch (error) {
+        console.error(error)
+    }
+   
 }
 
 bot.on('ready', async () => {
@@ -59,6 +282,13 @@ bot.on('message', async (msg) => {
             for( const item of leagueInfo.rows) {
                 league = item.league
             }
+        }
+
+        if (msg.content.startsWith('!gotw')) {
+            creatingTheGOTW(msg, league)
+        }
+        if (msg.content.startsWith('!findgotw')) {
+            findGOTW(msg, league)
         }
         if (msg.content.startsWith('!config')) {
             if (msg.member.roles.cache.some(role => role.name === 'Channel Creator')) {
@@ -104,6 +334,12 @@ bot.on('message', async (msg) => {
                         // console.log(channel)
                     });
                     for (const game of data.data) {
+                        if (game.awayTeam === 'Football Team') {
+                            game.awayTeam = 'WFT'
+                        }
+                        if (game.homeTeam === 'Football Team') {
+                            game.homeTeam = 'WFT'
+                        }
                         msg.guild.channels.create(`${game.awayTeam}-${game.homeTeam}` , { type: 'text', parent: cat }).then((channel) => {
                             // console.log(channel)
                         });
