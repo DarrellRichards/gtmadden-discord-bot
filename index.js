@@ -368,7 +368,11 @@ bot.on('message', async (msg) => {
             return helpGOTW(msg, league)
         }
         if (msg.content.startsWith('!gotw')) {
-            return creatingTheGOTW(msg, league)
+            if (msg.member.roles.cache.some(role => role.name === 'Channel Creator')) {
+                return creatingTheGOTW(msg, league)
+            } else {
+                return msg.reply('You do not have permissions to create the GOTW.')
+            }
         }
         if (msg.content.startsWith('!findgotw')) {
             return findGOTW(msg, league)
