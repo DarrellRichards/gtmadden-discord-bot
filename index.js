@@ -77,11 +77,9 @@ bot.on('messageReactionAdd', async (reaction, user) => {
         }
     }
 
+
     try {
         if (user.username !== 'GTMadden') {
-            // Save Reaction to DB
-            // Check if a user has already voted...
-            // if (reaction._emoji.name !== '🔵' || reaction._emoji.name !== '🟢') return reaction.remove(user)
             if (!hasUserVoted && !isGameLocked) {
                 if (reaction._emoji.name === '🟢') {
                     const query = `INSERT INTO gameofweekvotes(messageid, userid, votecolor, username, discorduser)VALUES(${reaction.message.id}, ${user.id}, 'Green', '${user.username}', '${user.username}#${user.discriminator}')`
@@ -104,12 +102,21 @@ bot.on('messageReactionAdd', async (reaction, user) => {
                 } 
                 
             } else {
+                if (isGameLocked) {
+                    await message.channel.send(`<@${user.id}> voting for this game has been locked, good luck next week`).then(r => setTimeout(() => {
+                        r.delete({ timeout: 5000 })
+                    }, 5000))
+                    const msg = await message.channel.messages.fetch(reaction.message.id)
+                    return msg.reactions.resolve(reaction._emoji.name).users.remove(user.id);
+                }
                 await message.channel.send(`<@${user.id}> you have already voted. Please remove your other vote before voting again`).then(r => setTimeout(() => {
                     r.delete()
                 }, 5000))
                 const msg = await message.channel.messages.fetch(reaction.message.id)
                 return msg.reactions.resolve(reaction._emoji.name).users.remove(user.id);
             }
+
+            
         } else {
             console.log('GTMadden Setup Reactions')
         }
@@ -154,6 +161,14 @@ bot.on('messageReactionRemove', async (reaction, user) => {
                 r.delete({ timeout: 5000 })
             }, 5000))
         }
+    }
+
+    if (isGameLocked && hasUserVoted) {
+        await message.channel.send(`<@${user.id}> voting for this game has been locked, good luck next week`).then(r => setTimeout(() => {
+            r.delete({ timeout: 5000 })
+        }, 5000))
+        const msg = await message.channel.messages.fetch(reaction.message.id)
+        return msg.react(reaction._emoji.name)
     }
 
     
@@ -213,7 +228,7 @@ const creatingTheGOTW = async (msg, league) => {
     }
 
     const message = `
-        @everyone GAME OF THE WEEK
+        @everyone Week ${fetchedTeams[0].week} GAME OF THE WEEK
 
 ${fetchedTeams[0].teamName.toUpperCase()} (${fetchedTeams[0].record}) 🟢 vs ${fetchedTeams[1].teamName.toUpperCase()} (${fetchedTeams[1].record}) 🔵
 
@@ -243,31 +258,12 @@ THERE WILL BE END OF THE SEASON INCENTIVES FOR PARTICIPATION:
 
 STILL WORKING ON THE FINAL DETAILS. MORE INFORMATION WILL BE PROVIDED WHEN AVAILABLE`;
     msg.channel.send(message).then(async (message) => {
-        // message.id = the message id of the sent message
         msg.channel.send(`The above GOTW ID is ${message.id}`)
-        const query = `INSERT INTO gameofweek(messageid, team, team2, league)VALUES(${message.id}, '${fetchedTeams[0].teamName}', '${fetchedTeams[1].teamName}', ${league})`
-        console.log(query)
+        const query = `INSERT INTO gameofweek(messageid, team, team2, league, week)VALUES(${message.id}, '${fetchedTeams[0].teamName}', '${fetchedTeams[1].teamName}', ${league}, ${fetchedTeams[0].week})`
+        // console.log(query)
         await client.query(query)
-        // await client.query(`INSERT INTO gameoftheweek(messageID, team, team2, )VALUES(${message.id}, ${fetchedTeams[0]}, ${fetchedTeams[1]})`)
         message.react("🟢")
         message.react("🔵")
-        // const filter = (reaction, user) => {
-        //     return ['🟢', '🔵'].includes(reaction.emoji.name) && user.id === interaction.user.id;
-        // };
-        // message.awaitReactions({})
-        //     .then(collected => {
-        //         const reaction = collected.first();
-        //         console.log(reaction)
-        //         console.log(collected)
-        //         if (reaction.emoji.name === '👍') {
-        //             message.reply('You reacted with a thumbs up.');
-        //         } else {
-        //             message.reply('You reacted with a thumbs down.');
-        //         }
-        //     })
-        //     .catch(collected => {
-        //         message.reply('You reacted with neither a thumbs up, nor a thumbs down.');
-        //     });
       }).catch((err) => {
         console.error(err)
         return msg.reply('GOTW was unable to created...')
@@ -278,6 +274,15 @@ STILL WORKING ON THE FINAL DETAILS. MORE INFORMATION WILL BE PROVIDED WHEN AVAIL
     }
 }
 
+const helpGOTW = async (msg, league) => {
+    return msg.reply(`GOTW Help
+        
+!gotw team team - Pass back team names as Raiders Eagles (This will create the GOTW Post)
+!findgotw (You can pass back message id here) - without messageid will pull all GOTW posts from the past, you can add a message id and it will pull that GOTW
+!gotw lock messageid - this will lock the gotw voting and no one will be allowed to vote after or remove there vote.
+    `)
+}
+
 
 const findGOTW = async (msg, league) => {
     // Find a Single GOTW
@@ -286,17 +291,41 @@ const findGOTW = async (msg, league) => {
     try {
         const found = await client.query(`SELECT * FROM gtmadden WHERE league=${league}`)
         if (found.rowCount <= 0) return msg.reply('League is not configged yet, run !config with league id')
-    
-        const query = `SELECT * FROM gameofweek`
+        const gotw = msg.content.substr("!findgotw ".length);
+        if (gotw) {
+            const query = `SELECT * FROM gameofweek WHERE league = '${league}' AND messageid = '${gotw}'`
+            const data = await client.query(query)
+            if (data.rowCount <= 0) return msg.reply('GOTW was not found, checkout all GOTW here !findgotw')
+            for (const game of data.rows) {
+                const ff = new Discord.MessageEmbed()
+                    .setTitle(`Week ${game.week} - ${game.team} vs ${game.team2}`)
+                const queryVotes = `SELECT * FROM gameofweekvotes WHERE messageid = '${game.messageid}'`
+                const voteData = await client.query(queryVotes)
+                for (const vote of voteData.rows) {
+                    if (vote.votecolor === 'Green') {
+                        ff.addField('Voted:', game.team, true)
+                    }
+
+                    if (vote.votecolor === 'Blue') {
+                        ff.addField('Voted:', game.team2, true)
+                    }
+                    ff.addField('User:', `<@!${vote.userid}>`, true)
+                }
+
+                games.push(ff)
+            }
+            return msg.reply({embeds: games})
+        } 
+        const query = `SELECT * FROM gameofweek WHERE league = '${league}'`
     
         const data = await client.query(query)
         for (const game of data.rows) {
             const ff = new Discord.MessageEmbed()
-                .setTitle(`${game.team} vs ${game.team2}`)
-            // if (embed) msg.reply({embeds: [embed]})
+                .setTitle(`Week ${game.week} - ${game.team} vs ${game.team2}`)
             const queryVotes = `SELECT * FROM gameofweekvotes WHERE messageid = '${game.messageid}'`
             const voteData = await client.query(queryVotes)
             for (const vote of voteData.rows) {
+                ff.setDescription(`GOTW ID: ${game.messageid}`)
                 if (vote.votecolor === 'Green') {
                     ff.addField('Voted:', game.team, true)
                 }
@@ -305,13 +334,14 @@ const findGOTW = async (msg, league) => {
                     ff.addField('Voted:', game.team2, true)
                 }
                 ff.addField('User:', `<@!${vote.userid}>`, true)
+            
             }
 
             games.push(ff)
 
         }
         
-        msg.reply({embeds: games})
+        return msg.reply({embeds: games})
     } catch (error) {
         console.error(error)
     }
@@ -334,12 +364,14 @@ bot.on('message', async (msg) => {
                 league = item.league
             }
         }
-
+        if (msg.content.startsWith('!gotwhelp')) {
+            return helpGOTW(msg, league)
+        }
         if (msg.content.startsWith('!gotw')) {
-            creatingTheGOTW(msg, league)
+            return creatingTheGOTW(msg, league)
         }
         if (msg.content.startsWith('!findgotw')) {
-            findGOTW(msg, league)
+            return findGOTW(msg, league)
         }
         if (msg.content.startsWith('!config')) {
             if (msg.member.roles.cache.some(role => role.name === 'Channel Creator')) {
