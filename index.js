@@ -34,7 +34,7 @@ const checkIfUserVoted = async (reaction, user, checkDelete = false) => {
                 }
                 resolve(false)
             } else {
-                const query = `SELECT * FROM gameofweekvotes WHERE messageid='${reaction.message.id}'`
+                const query = `SELECT * FROM gameofweekvotes WHERE messageid='${reaction.message.id} AND userid = ${user.id}'`
                 const found = await client.query(query)
                 if (found.rowCount > 0) return resolve(true)
                 resolve(false)
