@@ -34,7 +34,7 @@ const checkIfUserVoted = async (reaction, user, checkDelete = false) => {
                 }
                 resolve(false)
             } else {
-                const query = `SELECT * FROM gameofweekvotes WHERE messageid='${reaction.message.id} AND userid = ${user.id}'`
+                const query = `SELECT * FROM gameofweekvotes WHERE messageid='${reaction.message.id}' AND userid = '${user.id}'`
                 const found = await client.query(query)
                 if (found.rowCount > 0) return resolve(true)
                 resolve(false)
@@ -304,15 +304,13 @@ const findGOTW = async (msg, league) => {
                 const voteData = await client.query(queryVotes)
                 for (const vote of voteData.rows) {
                     if (vote.votecolor === 'Green') {
-                        voted.push(`${game.team} - <@!${vote.userid}> \u200B`)
+                        voted.push(`${game.team} - <@!${vote.userid}> \n`)
                     }
                     if (vote.votecolor === 'Blue') {
-                        voted.push(`${game.team2} - <@!${vote.userid}> \u200B`)
+                        voted.push(`${game.team2} - <@!${vote.userid}> \n`)
                     }
-                    // ff.addField('User:', `<@!${vote.userid}>`, true)
-                    // ff.addField('\u200B', '\u200B')
                 }
-                ff.addFields({ name: "Votes",  value: `**${voted}**`, inline: true})
+                ff.addFields({ name: "Votes",  value: `**${voted}**`})
                 games.push(ff)
             }
             return msg.reply({embeds: games})
