@@ -310,7 +310,7 @@ const findGOTW = async (msg, league) => {
                         ff.addField('Voted:', game.team2, true)
                     }
                     ff.addField('User:', `<@!${vote.userid}>`, true)
-                    ff.addField('', '----------------------------')
+                    ff.addField('\u200B', '\u200B')
                 }
 
                 games.push(ff)
