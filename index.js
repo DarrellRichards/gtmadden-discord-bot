@@ -304,32 +304,15 @@ const findGOTW = async (msg, league) => {
                 const voteData = await client.query(queryVotes)
                 for (const vote of voteData.rows) {
                     if (vote.votecolor === 'Green') {
-                        voted.push({
-                            user: vote.userid,
-                            team: game.team
-                        })
-                        // ff.addField('Voted:', game.team, true)
+                        voted.push(`${game.team} - <@!${vote.userid}> \u200B`)
                     }
-
                     if (vote.votecolor === 'Blue') {
-                        voted.push({
-                            user: vote.userid,
-                            team: game.team2
-                        })
-                        // ff.addField('Voted:', game.team2, true)
+                        voted.push(`${game.team2} - <@!${vote.userid}> \u200B`)
                     }
                     // ff.addField('User:', `<@!${vote.userid}>`, true)
                     // ff.addField('\u200B', '\u200B')
                 }
-                for (const votes of voted) {
-                    if (votes.team === game.team) {
-                        ff.addField(`Voted ${votes.team}`, `<@!${votes.user}>`)
-                    }
-                    if (votes.team === game.team2) {
-                        ff.addField(`Voted ${votes.team}`, `@!${votes.user}>`)
-                    }
-                    
-                }
+                ff.addFields({ name: "Votes",  value: `**${voted}**`, inline: true})
                 games.push(ff)
             }
             return msg.reply({embeds: games})
