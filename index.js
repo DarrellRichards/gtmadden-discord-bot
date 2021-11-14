@@ -288,6 +288,7 @@ const findGOTW = async (msg, league) => {
     // Find a Single GOTW
     // Find all GOTW's
     const games = []
+    const voted = []
     try {
         const found = await client.query(`SELECT * FROM gtmadden WHERE league=${league}`)
         if (found.rowCount <= 0) return msg.reply('League is not configged yet, run !config with league id')
@@ -303,17 +304,25 @@ const findGOTW = async (msg, league) => {
                 const voteData = await client.query(queryVotes)
                 for (const vote of voteData.rows) {
                     if (vote.votecolor === 'Green') {
-                        ff.addField('Voted:', game.team, true)
+                        return voted.push({
+                            user: vote.userid,
+                            team: game.team
+                        })
+                        // ff.addField('Voted:', game.team, true)
                     }
 
                     if (vote.votecolor === 'Blue') {
-                        ff.addField('Voted:', game.team2, true)
+                        return voted.push({
+                            user: vote.userid,
+                            team: game.team
+                        })
+                        // ff.addField('Voted:', game.team2, true)
                     }
-                    ff.addField('User:', `<@!${vote.userid}>`, true)
-                    ff.addField('\u200B', '\u200B')
+                    // ff.addField('User:', `<@!${vote.userid}>`, true)
+                    // ff.addField('\u200B', '\u200B')
                 }
-
-                games.push(ff)
+                console.log(voted)
+                // games.push(ff)
             }
             return msg.reply({embeds: games})
         } 
