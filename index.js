@@ -13,13 +13,33 @@ const TOKEN = process.env.TOKEN;
 const bot = new Discord.Client({ intents: ["GUILDS", "GUILD_MESSAGES", "GUILD_MESSAGE_REACTIONS"], partials: ['MESSAGE', 'CHANNEL', 'REACTION'] })
 bot.login(TOKEN);
 
-const checkIfUserVoted = async (reaction, user) => {
+let msg;
+
+const checkIfUserVoted = async (reaction, user, checkDelete = false) => {
     return new Promise(async (resolve, reject) => {
         try {
-            const query = `SELECT * FROM gameofweekvotes WHERE messageid='${reaction.message.id}'`
-            const found = await client.query(query)
-            if (found.rowCount > 0) return resolve(true)
-            resolve(false)
+            if (checkDelete) {
+                const query = `SELECT * FROM gameofweekvotes WHERE messageid='${reaction.message.id}'`
+                const found = await client.query(query)
+                
+                if (found.rowCount > 0) {
+                    if (reaction._emoji.name === '🟢' && found.rows[0].votecolor === 'Green') {
+                        return resolve(true)
+                    }
+                    if (reaction._emoji.name === '🔵' && found.rows[0].votecolor === 'Blue') {
+                        return resolve(true)
+                    }
+
+                    resolve(false)
+                }
+                resolve(false)
+            } else {
+                const query = `SELECT * FROM gameofweekvotes WHERE messageid='${reaction.message.id}'`
+                const found = await client.query(query)
+                if (found.rowCount > 0) return resolve(true)
+                resolve(false)
+            }
+            
         } catch (error) {
             reject(error)
         }
@@ -45,12 +65,7 @@ const checkIfLocked = async (reaction, user) => {
 bot.on('messageReactionAdd', async (reaction, user) => {
     const hasUserVoted = await checkIfUserVoted(reaction, user)
     const isGameLocked = await checkIfLocked(reaction, user)
-    console.log(isGameLocked)
-    console.log(reaction.message.id)
-    console.log(reaction._emoji.name)
-    console.log(user.id)
-    console.log(user.username)
-    console.log(user.discriminator)
+    const message = reaction.message
     if (reaction.partial) {
         // If the message this reaction belongs to was removed the fetching might result in an API error, which we need to handle
         try {
@@ -66,12 +81,16 @@ bot.on('messageReactionAdd', async (reaction, user) => {
         if (user.username !== 'GTMadden') {
             // Save Reaction to DB
             // Check if a user has already voted...
+            // if (reaction._emoji.name !== '🔵' || reaction._emoji.name !== '🟢') return reaction.remove(user)
             if (!hasUserVoted && !isGameLocked) {
                 if (reaction._emoji.name === '🟢') {
                     const query = `INSERT INTO gameofweekvotes(messageid, userid, votecolor, username, discorduser)VALUES(${reaction.message.id}, ${user.id}, 'Green', '${user.username}', '${user.username}#${user.discriminator}')`
                     await client.query(query)
                     const query2 = `UPDATE gameofweek SET teamVote = teamVote + 1 WHERE messageid = '${reaction.message.id}'`
                     await client.query(query2)
+                    return await message.channel.send(`<@${user.id}> your vote has been accepted`).then(r => setTimeout(() => {
+                        r.delete({ timeout: 5000 })
+                    }, 5000))
                 }
     
                 if (reaction._emoji.name === '🔵') {
@@ -79,11 +98,18 @@ bot.on('messageReactionAdd', async (reaction, user) => {
                     await client.query(query)
                     const query2 = `UPDATE gameofweek SET team2vote = team2vote + 1 WHERE messageid = '${reaction.message.id}'`
                     await client.query(query2)
-                }
+                    return await message.channel.send(`<@${user.id}> your vote has been accepted`).then(r => setTimeout(() => {
+                        r.delete({ timeout: 5000 })
+                    }, 5000))
+                } 
+                
             } else {
-                console.error('User has already voted')
+                await message.channel.send(`<@${user.id}> you have already voted. Please remove your other vote before voting again`).then(r => setTimeout(() => {
+                    r.delete()
+                }, 5000))
+                const msg = await message.channel.messages.fetch(reaction.message.id)
+                return msg.reactions.resolve(reaction._emoji.name).users.remove(user.id);
             }
-            
         } else {
             console.log('GTMadden Setup Reactions')
         }
@@ -93,8 +119,9 @@ bot.on('messageReactionAdd', async (reaction, user) => {
 });
 
 bot.on('messageReactionRemove', async (reaction, user) => {
-    const hasUserVoted = await checkIfUserVoted(reaction, user)
+    const hasUserVoted = await checkIfUserVoted(reaction, user, true)
     const isGameLocked = await checkIfLocked(reaction, user)
+    const message = reaction.message
     if (reaction.partial) {
         // If the message this reaction belongs to was removed the fetching might result in an API error, which we need to handle
         try {
@@ -113,6 +140,9 @@ bot.on('messageReactionRemove', async (reaction, user) => {
             await client.query(query)
             const query2 = `UPDATE gameofweek SET teamVote = teamVote - 1 WHERE messageid = '${reaction.message.id}'`
             await client.query(query2)
+            return await message.channel.send(`<@${user.id}> we have removed your vote of 🟢`).then(r => setTimeout(() => {
+                r.delete({ timeout: 5000 })
+            }, 5000))
         }
     
         if (reaction._emoji.name === '🔵') {
@@ -120,6 +150,9 @@ bot.on('messageReactionRemove', async (reaction, user) => {
             await client.query(query)
             const query2 = `UPDATE gameofweek SET team2Vote = team2Vote - 1 WHERE messageid = '${reaction.message.id}'`
             await client.query(query2)
+            return await message.channel.send(`<@${user.id}> we have removed your vote of 🔵`).then(r => setTimeout(() => {
+                r.delete({ timeout: 5000 })
+            }, 5000))
         }
     }
 
@@ -158,6 +191,7 @@ const grabRookies = async (msg, league, server) => {
 
 const creatingTheGOTW = async (msg, league) => {
     try {
+        msg = msg
     const found = await client.query(`SELECT * FROM gtmadden WHERE league=${league}`)
     if (found.rowCount <= 0) return msg.reply('League is not configged yet, run !config with league id')
     const stuff = msg.content.substr("!gotw ".length);
@@ -211,12 +245,29 @@ STILL WORKING ON THE FINAL DETAILS. MORE INFORMATION WILL BE PROVIDED WHEN AVAIL
     msg.channel.send(message).then(async (message) => {
         // message.id = the message id of the sent message
         msg.channel.send(`The above GOTW ID is ${message.id}`)
-        const query = `INSERT INTO gameofweek(messageid, team, team2)VALUES(${message.id}, '${fetchedTeams[0].teamName}', '${fetchedTeams[1].teamName}')`
+        const query = `INSERT INTO gameofweek(messageid, team, team2, league)VALUES(${message.id}, '${fetchedTeams[0].teamName}', '${fetchedTeams[1].teamName}', ${league})`
         console.log(query)
         await client.query(query)
         // await client.query(`INSERT INTO gameoftheweek(messageID, team, team2, )VALUES(${message.id}, ${fetchedTeams[0]}, ${fetchedTeams[1]})`)
         message.react("🟢")
         message.react("🔵")
+        // const filter = (reaction, user) => {
+        //     return ['🟢', '🔵'].includes(reaction.emoji.name) && user.id === interaction.user.id;
+        // };
+        // message.awaitReactions({})
+        //     .then(collected => {
+        //         const reaction = collected.first();
+        //         console.log(reaction)
+        //         console.log(collected)
+        //         if (reaction.emoji.name === '👍') {
+        //             message.reply('You reacted with a thumbs up.');
+        //         } else {
+        //             message.reply('You reacted with a thumbs down.');
+        //         }
+        //     })
+        //     .catch(collected => {
+        //         message.reply('You reacted with neither a thumbs up, nor a thumbs down.');
+        //     });
       }).catch((err) => {
         console.error(err)
         return msg.reply('GOTW was unable to created...')
