@@ -228,7 +228,7 @@ const creatingTheGOTW = async (msg, league) => {
     }
 
     const message = `
-        @everyone Week ${fetchedTeams[0].week} GAME OF THE WEEK
+        @everyone Week ${fetchedTeams[0].week + 1} GAME OF THE WEEK
 
 ${fetchedTeams[0].teamName.toUpperCase()} (${fetchedTeams[0].record}) 🟢 vs ${fetchedTeams[1].teamName.toUpperCase()} (${fetchedTeams[1].record}) 🔵
 
