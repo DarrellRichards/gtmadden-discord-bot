@@ -259,7 +259,7 @@ THERE WILL BE END OF THE SEASON INCENTIVES FOR PARTICIPATION:
 STILL WORKING ON THE FINAL DETAILS. MORE INFORMATION WILL BE PROVIDED WHEN AVAILABLE`;
     msg.channel.send(message).then(async (message) => {
         msg.channel.send(`The above GOTW ID is ${message.id}`)
-        const query = `INSERT INTO gameofweek(messageid, team, team2, league, week)VALUES(${message.id}, '${fetchedTeams[0].teamName}', '${fetchedTeams[1].teamName}', ${league}, ${fetchedTeams[0].week})`
+        const query = `INSERT INTO gameofweek(messageid, team, team2, league, week)VALUES(${message.id}, '${fetchedTeams[0].teamName}', '${fetchedTeams[1].teamName}', ${league}, ${fetchedTeams[0].week + 1})`
         // console.log(query)
         await client.query(query)
         message.react("🟢")
