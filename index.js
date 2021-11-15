@@ -214,6 +214,7 @@ const addingWinnerToDB = async (msg, league, teams) => {
             return msg.reply('No winner or user passed back')
         }
     } catch (error) {
+        console.log(error)
         return msg.reply('There was a error adding winner')
     }
 }
@@ -327,6 +328,9 @@ const findGOTW = async (msg, league) => {
                     if (vote.votecolor === 'Blue') {
                         voted.push(`${game.team2} - <@!${vote.userid}> \n`)
                     }
+                }
+                if (game.winner !== null) {
+                    ff.addFields({ name: "Winner", value: `${game.winner} - ${game.wusername}`, inline: true })
                 }
                 ff.addFields({ name: "Votes",  value: `**${voted}**`})
                 games.push(ff)
