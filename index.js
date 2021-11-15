@@ -220,7 +220,7 @@ const creatingTheGOTW = async (msg, league) => {
         msg.reply(`${teams[1]} has been locked, all voting from here will be rejected in the database`)
         return
     }
-    const data = await axios.get(`https://gametime-21.herokuapp.com/6214563/stats/?team=${teams[0]}&team2=${teams[1]}`) 
+    const data = await axios.get(`https://gametime-21.herokuapp.com/${league}/stats/?team=${teams[0]}&team2=${teams[1]}`) 
     const fetchedTeams = []
 
     for(const team of data.data.matchedTeams) {
