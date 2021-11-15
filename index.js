@@ -204,6 +204,20 @@ const grabRookies = async (msg, league, server) => {
     }
 }
 
+const addingWinnerToDB = async (msg, league, teams) => {
+    try {
+        if (teams[2] && teams[3]) {
+            const query = `UPDATE gameofweek SET winner = ${teams[2]}, wusername = ${teams[3]} WHERE messageid = '${teams[1]}'`
+            await client.query(query)
+            return msg.reply(`We added ${teams[2]} as winners of GOTW: ${teams[1]}`)
+        } else {
+            return msg.reply('No winner or user passed back')
+        }
+    } catch (error) {
+        return msg.reply('There was a error adding winner')
+    }
+}
+
 const creatingTheGOTW = async (msg, league) => {
     try {
         msg = msg
@@ -219,6 +233,10 @@ const creatingTheGOTW = async (msg, league) => {
         await client.query(query2)
         msg.reply(`${teams[1]} has been locked, all voting from here will be rejected in the database`)
         return
+    }
+
+    if (teams[0] === 'winner') {
+        return addingWinnerToDB(msg, league, teams)
     }
     const data = await axios.get(`https://gametime-21.herokuapp.com/${league}/stats/?team=${teams[0]}&team2=${teams[1]}`) 
     const fetchedTeams = []
@@ -346,6 +364,8 @@ const findGOTW = async (msg, league) => {
     }
    
 }
+
+
 
 bot.on('ready', async () => {
   console.info(`Logged in as ${bot.user.tag}!`);
