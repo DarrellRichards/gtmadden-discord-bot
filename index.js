@@ -62,6 +62,46 @@ const checkIfLocked = async (reaction, user) => {
     })
 }
 
+
+// const addMoney = async (msg, league) => {
+//     try {
+//         const found = await client.query(`SELECT * FROM gtmadden WHERE league=${league}`)
+//         if (found.rowCount <= 0) return msg.reply('League is not configged yet, run !config with league id')
+//         const gotw = msg.content.substr("!payout ".length);
+//         if (!gotw) return msg.reply('Must pass back the GOTW ID ie: !payout messageID')
+//         // Send Message Save Message ID in DB and update reactions
+//         // Check which teams are being selected to the GOTW
+//         if (gotw === undefined) return msg.reply('Must pass back the GOTW ID ie: !payout messageID')
+//         const queryGame = `SELECT * FROM gameofweek WHERE league = '${league}' AND messageid = '${gotw}'`
+//         const data = await client.query(queryGame)
+//         if (data.rowCount <= 0) return msg.reply('GOTW was not found, checkout all GOTW here !findgotw')
+//         for (const game of data.rows) {
+//             if (game.winner === null) {
+//                 return msg.reply(`There is no winner for this game of the week, please run !gotw winner(teamName)`)
+//             }
+//             const query = `SELECT * FROM gameofweekvotes WHERE messageid = '${game.messageid}'`
+//             const voteData = await client.query(query)
+//             for (const vote of voteData.rows) {
+//                 if (vote.votecolor.toUpperCase() === game.winner.toUpperCase()) {
+//                     if (vote.userid !== game.wusername.slice(3,-1)) {
+//                         console.log('Lets add some money')
+//                     }
+//                 }
+//                 if (vote.votecolor.toUpperCase() === game.winner.toUpperCase()) {
+//                     if (vote.userid !== game.wusername.slice(3,-1)) {
+//                         msg.channel.send(`!add-money bank <@!${vote.userid}> 100000`)
+//                     } else {
+//                         console.log('this is the winner of the game of the week')
+//                     }
+//                 }
+//             }
+//         }
+        
+//     } catch (error) {
+//         console.log(error)
+//     }
+// }
+
 bot.on('messageReactionAdd', async (reaction, user) => {
     const hasUserVoted = await checkIfUserVoted(reaction, user)
     const isGameLocked = await checkIfLocked(reaction, user)
@@ -206,8 +246,8 @@ const grabRookies = async (msg, league, server) => {
 
 const addingWinnerToDB = async (msg, league, teams) => {
     try {
-        if (teams[2] && teams[3]) {
-            const query = `UPDATE gameofweek SET winner = ${teams[2]}, wusername = ${teams[3]} WHERE messageid = '${teams[1]}'`
+        if (teams[2] !== undefined && teams[3] !== undefined) {
+            const query = `UPDATE gameofweek SET winner = '${teams[2]}', wusername = '${teams[3]}' WHERE messageid = '${teams[1]}'`
             await client.query(query)
             return msg.reply(`We added ${teams[2]} as winners of GOTW: ${teams[1]}`)
         } else {
@@ -307,7 +347,8 @@ const findGOTW = async (msg, league) => {
     // Find a Single GOTW
     // Find all GOTW's
     const games = []
-    const voted = []
+    const voted1 = []
+    const voted2 = []
     try {
         const found = await client.query(`SELECT * FROM gtmadden WHERE league=${league}`)
         if (found.rowCount <= 0) return msg.reply('League is not configged yet, run !config with league id')
@@ -323,16 +364,25 @@ const findGOTW = async (msg, league) => {
                 const voteData = await client.query(queryVotes)
                 for (const vote of voteData.rows) {
                     if (vote.votecolor === 'Green') {
-                        voted.push(`${game.team} - <@!${vote.userid}> \n`)
+                        voted1.push(`<@!${vote.userid}> \n`)
                     }
                     if (vote.votecolor === 'Blue') {
-                        voted.push(`${game.team2} - <@!${vote.userid}> \n`)
+                        voted2.push(`<@!${vote.userid}> \n`)
                     }
                 }
                 if (game.winner !== null) {
                     ff.addFields({ name: "Winner", value: `${game.winner} - ${game.wusername}`, inline: true })
                 }
-                ff.addFields({ name: "Votes",  value: `**${voted}**`})
+                if (voted1.length > 0) {
+                    ff.addFields({ name: `${game.team}`,  value: `**${voted1}**`})
+                } else {
+                    ff.addFields({ name: `${game.team}`,  value: 'No Votes'})
+                }
+                if (voted2.length > 0) {
+                    ff.addFields({ name: `${game.team2}`,  value: `**${voted2}**`})
+                } else {
+                    ff.addFields({ name: `${game.team2}`,  value: 'No Votes'})
+                }
                 games.push(ff)
             }
             return msg.reply({embeds: games})
@@ -387,6 +437,11 @@ bot.on('message', async (msg) => {
                 league = item.league
             }
         }
+
+        // if (msg.content.startsWith('!payout')) {
+        //     console.log('uh')
+        //     return addMoney(msg, league)
+        // }
         if (msg.content.startsWith('!gotwhelp')) {
             return helpGOTW(msg, league)
         }
