@@ -279,6 +279,14 @@ const creatingTheGOTW = async (msg, league) => {
     if (teams[0] === 'winner') {
         return addingWinnerToDB(msg, league, teams)
     }
+
+    if (teams[0] === 'wft') {
+        teams[0] = 'Football Team'
+    }
+
+    if (teams[1] === 'wft') {
+        teams[1] = 'Football Team'
+    }
     const data = await axios.get(`https://gametime-21.herokuapp.com/${league}/stats/?team=${teams[0]}&team2=${teams[1]}`) 
     const fetchedTeams = []
 
