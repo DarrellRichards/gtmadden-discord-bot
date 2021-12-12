@@ -492,7 +492,7 @@ bot.on('message', async (msg) => {
                 if (week > 0) {
                     msg.guild.channels.cache.forEach((channel)=>{
                         console.log(channel.name)
-                        if (channel.name === 'Weekly' || channel.name === 'games' || channel.name === 'GAMES'|| channel.name === '▬▬ GAME DAY ▬▬') {
+                        if (channel.name === 'Weekly' || channel.name === 'games' || channel.name === 'GAMES'|| channel.name === '▬▬ GAME DAY ▬▬' || channel.name === 'scheduling') {
                             cat = channel.id
                             msg.reply(`Currently setting up game channels for week ${week}`);
                         }
