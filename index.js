@@ -102,117 +102,117 @@ const checkIfLocked = async (reaction, user) => {
 //     }
 // }
 
-bot.on('messageReactionAdd', async (reaction, user) => {
-    const hasUserVoted = await checkIfUserVoted(reaction, user)
-    const isGameLocked = await checkIfLocked(reaction, user)
-    const message = reaction.message
-    if (reaction.partial) {
-        // If the message this reaction belongs to was removed the fetching might result in an API error, which we need to handle
-        try {
-            await reaction.fetch();
-        } catch (error) {
-            console.log('Something went wrong when fetching the message: ', error);
-            // Return as `reaction.message.author` may be undefined/null
-            return;
-        }
-    }
+// bot.on('messageReactionAdd', async (reaction, user) => {
+//     const hasUserVoted = await checkIfUserVoted(reaction, user)
+//     const isGameLocked = await checkIfLocked(reaction, user)
+//     const message = reaction.message
+//     if (reaction.partial) {
+//         // If the message this reaction belongs to was removed the fetching might result in an API error, which we need to handle
+//         try {
+//             await reaction.fetch();
+//         } catch (error) {
+//             console.log('Something went wrong when fetching the message: ', error);
+//             // Return as `reaction.message.author` may be undefined/null
+//             return;
+//         }
+//     }
 
 
-    try {
-        if (user.username !== 'GTMadden') {
-            if (!hasUserVoted && !isGameLocked) {
-                if (reaction._emoji.name === '🟢') {
-                    const query = `INSERT INTO gameofweekvotes(messageid, userid, votecolor, username, discorduser)VALUES(${reaction.message.id}, ${user.id}, 'Green', '${user.username}', '${user.username}#${user.discriminator}')`
-                    await client.query(query)
-                    const query2 = `UPDATE gameofweek SET teamVote = teamVote + 1 WHERE messageid = '${reaction.message.id}'`
-                    await client.query(query2)
-                    return await message.channel.send(`<@${user.id}> your vote has been accepted`).then(r => setTimeout(() => {
-                        r.delete({ timeout: 5000 })
-                    }, 5000))
-                }
+//     try {
+//         if (user.username !== 'GTMadden') {
+//             if (!hasUserVoted && !isGameLocked) {
+//                 if (reaction._emoji.name === '🟢') {
+//                     const query = `INSERT INTO gameofweekvotes(messageid, userid, votecolor, username, discorduser)VALUES(${reaction.message.id}, ${user.id}, 'Green', '${user.username}', '${user.username}#${user.discriminator}')`
+//                     await client.query(query)
+//                     const query2 = `UPDATE gameofweek SET teamVote = teamVote + 1 WHERE messageid = '${reaction.message.id}'`
+//                     await client.query(query2)
+//                     return await message.channel.send(`<@${user.id}> your vote has been accepted`).then(r => setTimeout(() => {
+//                         r.delete({ timeout: 5000 })
+//                     }, 5000))
+//                 }
     
-                if (reaction._emoji.name === '🔵') {
-                    const query = `INSERT INTO gameofweekvotes(messageid, userid, votecolor, username, discorduser)VALUES(${reaction.message.id}, ${user.id}, 'Blue', '${user.username}', '${user.username}#${user.discriminator}')`
-                    await client.query(query)
-                    const query2 = `UPDATE gameofweek SET team2vote = team2vote + 1 WHERE messageid = '${reaction.message.id}'`
-                    await client.query(query2)
-                    return await message.channel.send(`<@${user.id}> your vote has been accepted`).then(r => setTimeout(() => {
-                        r.delete({ timeout: 5000 })
-                    }, 5000))
-                } 
+//                 if (reaction._emoji.name === '🔵') {
+//                     const query = `INSERT INTO gameofweekvotes(messageid, userid, votecolor, username, discorduser)VALUES(${reaction.message.id}, ${user.id}, 'Blue', '${user.username}', '${user.username}#${user.discriminator}')`
+//                     await client.query(query)
+//                     const query2 = `UPDATE gameofweek SET team2vote = team2vote + 1 WHERE messageid = '${reaction.message.id}'`
+//                     await client.query(query2)
+//                     return await message.channel.send(`<@${user.id}> your vote has been accepted`).then(r => setTimeout(() => {
+//                         r.delete({ timeout: 5000 })
+//                     }, 5000))
+//                 } 
                 
-            } else {
-                if (isGameLocked) {
-                    await message.channel.send(`<@${user.id}> voting for this game has been locked, good luck next week`).then(r => setTimeout(() => {
-                        r.delete({ timeout: 5000 })
-                    }, 5000))
-                    const msg = await message.channel.messages.fetch(reaction.message.id)
-                    return msg.reactions.resolve(reaction._emoji.name).users.remove(user.id);
-                }
-                await message.channel.send(`<@${user.id}> you have already voted. Please remove your other vote before voting again`).then(r => setTimeout(() => {
-                    r.delete()
-                }, 5000))
-                const msg = await message.channel.messages.fetch(reaction.message.id)
-                return msg.reactions.resolve(reaction._emoji.name).users.remove(user.id);
-            }
+//             } else {
+//                 if (isGameLocked) {
+//                     await message.channel.send(`<@${user.id}> voting for this game has been locked, good luck next week`).then(r => setTimeout(() => {
+//                         r.delete({ timeout: 5000 })
+//                     }, 5000))
+//                     const msg = await message.channel.messages.fetch(reaction.message.id)
+//                     return msg.reactions.resolve(reaction._emoji.name).users.remove(user.id);
+//                 }
+//                 await message.channel.send(`<@${user.id}> you have already voted. Please remove your other vote before voting again`).then(r => setTimeout(() => {
+//                     r.delete()
+//                 }, 5000))
+//                 const msg = await message.channel.messages.fetch(reaction.message.id)
+//                 return msg.reactions.resolve(reaction._emoji.name).users.remove(user.id);
+//             }
 
             
-        } else {
-            console.log('GTMadden Setup Reactions')
-        }
-    } catch (error) {
-        console.error(error)   
-    }
-});
+//         } else {
+//             console.log('GTMadden Setup Reactions')
+//         }
+//     } catch (error) {
+//         console.error(error)   
+//     }
+// });
 
-bot.on('messageReactionRemove', async (reaction, user) => {
-    const hasUserVoted = await checkIfUserVoted(reaction, user, true)
-    const isGameLocked = await checkIfLocked(reaction, user)
-    const message = reaction.message
-    if (reaction.partial) {
-        // If the message this reaction belongs to was removed the fetching might result in an API error, which we need to handle
-        try {
-            await reaction.fetch();
-        } catch (error) {
-            console.log('Something went wrong when fetching the message: ', error);
-            // Return as `reaction.message.author` may be undefined/null
-            return;
+// bot.on('messageReactionRemove', async (reaction, user) => {
+//     const hasUserVoted = await checkIfUserVoted(reaction, user, true)
+//     const isGameLocked = await checkIfLocked(reaction, user)
+//     const message = reaction.message
+//     if (reaction.partial) {
+//         // If the message this reaction belongs to was removed the fetching might result in an API error, which we need to handle
+//         try {
+//             await reaction.fetch();
+//         } catch (error) {
+//             console.log('Something went wrong when fetching the message: ', error);
+//             // Return as `reaction.message.author` may be undefined/null
+//             return;
        
-        }
-    }
+//         }
+//     }
 
-    if (hasUserVoted && !isGameLocked) {
-        if (reaction._emoji.name === '🟢') {
-            const query = `DELETE FROM gameofweekvotes WHERE messageid = '${reaction.message.id}' AND userid = '${user.id}'`
-            await client.query(query)
-            const query2 = `UPDATE gameofweek SET teamVote = teamVote - 1 WHERE messageid = '${reaction.message.id}'`
-            await client.query(query2)
-            return await message.channel.send(`<@${user.id}> we have removed your vote of 🟢`).then(r => setTimeout(() => {
-                r.delete({ timeout: 5000 })
-            }, 5000))
-        }
+//     if (hasUserVoted && !isGameLocked) {
+//         if (reaction._emoji.name === '🟢') {
+//             const query = `DELETE FROM gameofweekvotes WHERE messageid = '${reaction.message.id}' AND userid = '${user.id}'`
+//             await client.query(query)
+//             const query2 = `UPDATE gameofweek SET teamVote = teamVote - 1 WHERE messageid = '${reaction.message.id}'`
+//             await client.query(query2)
+//             return await message.channel.send(`<@${user.id}> we have removed your vote of 🟢`).then(r => setTimeout(() => {
+//                 r.delete({ timeout: 5000 })
+//             }, 5000))
+//         }
     
-        if (reaction._emoji.name === '🔵') {
-            const query = `DELETE FROM gameofweekvotes WHERE messageid = '${reaction.message.id}' AND userid = '${user.id}'`
-            await client.query(query)
-            const query2 = `UPDATE gameofweek SET team2Vote = team2Vote - 1 WHERE messageid = '${reaction.message.id}'`
-            await client.query(query2)
-            return await message.channel.send(`<@${user.id}> we have removed your vote of 🔵`).then(r => setTimeout(() => {
-                r.delete({ timeout: 5000 })
-            }, 5000))
-        }
-    }
+//         if (reaction._emoji.name === '🔵') {
+//             const query = `DELETE FROM gameofweekvotes WHERE messageid = '${reaction.message.id}' AND userid = '${user.id}'`
+//             await client.query(query)
+//             const query2 = `UPDATE gameofweek SET team2Vote = team2Vote - 1 WHERE messageid = '${reaction.message.id}'`
+//             await client.query(query2)
+//             return await message.channel.send(`<@${user.id}> we have removed your vote of 🔵`).then(r => setTimeout(() => {
+//                 r.delete({ timeout: 5000 })
+//             }, 5000))
+//         }
+//     }
 
-    if (isGameLocked && hasUserVoted) {
-        await message.channel.send(`<@${user.id}> voting for this game has been locked, good luck next week`).then(r => setTimeout(() => {
-            r.delete({ timeout: 5000 })
-        }, 5000))
-        const msg = await message.channel.messages.fetch(reaction.message.id)
-        return msg.react(reaction._emoji.name)
-    }
+//     if (isGameLocked && hasUserVoted) {
+//         await message.channel.send(`<@${user.id}> voting for this game has been locked, good luck next week`).then(r => setTimeout(() => {
+//             r.delete({ timeout: 5000 })
+//         }, 5000))
+//         const msg = await message.channel.messages.fetch(reaction.message.id)
+//         return msg.react(reaction._emoji.name)
+//     }
 
     
-});
+// });
 
 
 const grabRookies = async (msg, league, server) => {
@@ -454,13 +454,13 @@ bot.on('message', async (msg) => {
         //     return addMoney(msg, league)
         // }
         if (msg.content.startsWith('!gotwhelp')) {
-            return helpGOTW(msg, league)
+            // return helpGOTW(msg, league)
         }
         if (msg.content.startsWith('!gotw')) {
             if (msg.member.roles.cache.some(role => role.name === 'Channel Creator')) {
-                return creatingTheGOTW(msg, league)
+                // return creatingTheGOTW(msg, league)
             } else {
-                return msg.reply('You do not have permissions to create the GOTW.')
+                // return msg.reply('You do not have permissions to create the GOTW.')
             }
         }
         if (msg.content.startsWith('!findgotw')) {
